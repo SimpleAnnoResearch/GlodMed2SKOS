@@ -8,10 +8,7 @@ import java.io.IOException;
 import java.io.Reader;
 import java.lang.reflect.GenericArrayType;
 import java.net.URI;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -32,6 +29,7 @@ import org.semanticweb.skosapibinding.SKOSManager;
 import uk.ac.manchester.cs.skos.SKOSDataFactoryImpl;
 
 import static de.simpleanno.glodmed.skos.Glodmed2Skos.CSVField.*;
+import static de.simpleanno.glodmed.skos.Glodmed2Skos.CSVField.definition;
 
 /**
  * @author ralph
@@ -208,25 +206,35 @@ public class Glodmed2Skos {
 
                 String language = part.getLanguage().name().toLowerCase();
 
-                SKOSAnnotation prefLabelAnnotation = df.getSKOSAnnotation(df.getSKOSPrefLabelProperty().getURI(), part.getLabel(), language);
-                SKOSAnnotationAssertion prefLabelAnnotationAssertion = df.getSKOSAnnotationAssertion(concept, prefLabelAnnotation);
-                changes.add(new AddAssertion(ds, prefLabelAnnotationAssertion));
+				Optional.of(part.getLabel()).filter(s -> !s.isEmpty()).ifPresent(label -> {
+					SKOSAnnotation prefLabelAnnotation = df.getSKOSAnnotation(df.getSKOSPrefLabelProperty().getURI(), label, language);
+					SKOSAnnotationAssertion prefLabelAnnotationAssertion = df.getSKOSAnnotationAssertion(concept, prefLabelAnnotation);
+					changes.add(new AddAssertion(ds, prefLabelAnnotationAssertion));
+				});
 
-                SKOSAnnotation definitionDP= df.getSKOSAnnotation(df.getSKOSDefinitionDataProperty().getURI(), part.getDefinition(), language);
-                SKOSAnnotationAssertion definitionAnnotationAssertion = df.getSKOSAnnotationAssertion(concept, definitionDP);
-                changes.add(new AddAssertion(ds, definitionAnnotationAssertion));
+				Optional.of(part.getDefinition()).filter(s -> !s.isEmpty()).ifPresent(definition -> {
+					SKOSAnnotation definitionDP= df.getSKOSAnnotation(df.getSKOSDefinitionDataProperty().getURI(), definition, language);
+					SKOSAnnotationAssertion definitionAnnotationAssertion = df.getSKOSAnnotationAssertion(concept, definitionDP);
+					changes.add(new AddAssertion(ds, definitionAnnotationAssertion));
+				});
 
-                SKOSAnnotation definedByDP= df.getSKOSAnnotation(URI.create("http://www.w3.org/2000/01/rdf-schema#isDefinedBy"), part.getSee());
-                SKOSAnnotationAssertion definedByAnnotationAssertion = df.getSKOSAnnotationAssertion(concept, definedByDP);
-                changes.add(new AddAssertion(ds, definedByAnnotationAssertion));
+				Optional.of(part.getSee()).filter(s -> !s.isEmpty()).ifPresent(see -> {
+					SKOSAnnotation definedByDP = df.getSKOSAnnotation(URI.create("http://www.w3.org/2000/01/rdf-schema#isDefinedBy"), see);
+					SKOSAnnotationAssertion definedByAnnotationAssertion = df.getSKOSAnnotationAssertion(concept, definedByDP);
+					changes.add(new AddAssertion(ds, definedByAnnotationAssertion));
+				});
 
-                SKOSAnnotation seeAlsoAnnotation = df.getSKOSAnnotation(URI.create("http://www.w3.org/2000/01/rdf-schema#seeAlso"), part.getSeeAlso());
-                SKOSAnnotationAssertion seeAlsoAnnotationAssertion = df.getSKOSAnnotationAssertion(concept, seeAlsoAnnotation);
-                changes.add(new AddAssertion(ds, seeAlsoAnnotationAssertion));
+				Optional.of(part.getSeeAlso()).filter(s -> !s.isEmpty()).ifPresent(seeAlso -> {
+					SKOSAnnotation seeAlsoAnnotation = df.getSKOSAnnotation(URI.create("http://www.w3.org/2000/01/rdf-schema#seeAlso"), seeAlso);
+					SKOSAnnotationAssertion seeAlsoAnnotationAssertion = df.getSKOSAnnotationAssertion(concept, seeAlsoAnnotation);
+					changes.add(new AddAssertion(ds, seeAlsoAnnotationAssertion));
+				});
 
-                SKOSAnnotation relatedDP= df.getSKOSAnnotation(df.getSKOSRelatedProperty().getURI(), part.getCompare(), language);
-                SKOSAnnotationAssertion relatedAnnotationAssertion = df.getSKOSAnnotationAssertion(concept, relatedDP);
-                changes.add(new AddAssertion(ds, relatedAnnotationAssertion));
+				Optional.of(part.getCompare()).filter(s -> !s.isEmpty()).ifPresent(compare -> {
+					SKOSAnnotation relatedDP= df.getSKOSAnnotation(df.getSKOSRelatedProperty().getURI(), compare, language);
+					SKOSAnnotationAssertion relatedAnnotationAssertion = df.getSKOSAnnotationAssertion(concept, relatedDP);
+					changes.add(new AddAssertion(ds, relatedAnnotationAssertion));
+				});
 
             });
 
