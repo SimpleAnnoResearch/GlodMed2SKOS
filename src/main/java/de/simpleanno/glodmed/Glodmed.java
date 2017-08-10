@@ -3,23 +3,15 @@
  */
 package de.simpleanno.glodmed;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 import de.simpleanno.glodmed.GlodmedLanguageSpecificEntryPart.CompoundKey;
 
 /**
  * @author ralph
  */
-public class Glodmed {
+public class Glodmed implements Iterable<GlodmedEntry> {
 	
-	public enum Glossary{GOMI, GOOT}
-	
-	public 	enum Language {EN, DE, FR, IT, PO, SP};
-
 	private HashMap<Integer, GlodmedEntry> entriesByID = new HashMap<>();
 	private HashMap<CompoundKey, ArrayList<GlodmedEntry>> entriesByLabel = new HashMap<>();
 	
@@ -43,8 +35,8 @@ public class Glodmed {
 		return Optional.ofNullable(entriesByID.get(id));
 	}
 	
-	public List<GlodmedEntry> getEntriesByLabel(String term, Language language) {
-		CompoundKey key = new CompoundKey(term, language);
+	public List<GlodmedEntry> getEntriesByLabel(Glossary glossary, String term, Language language) {
+		CompoundKey key = new CompoundKey(glossary, term, language);
 		ArrayList<GlodmedEntry> entries = entriesByLabel.get(key);
 		if (entries == null) {
 			entries = new ArrayList<>();
@@ -55,7 +47,11 @@ public class Glodmed {
 	
 	public void addEntry(GlodmedEntry entry) {
 		entriesByID.put(entry.getId(), entry);
-		entry.languageSpecificParts().forEach(part -> getEntriesByLabel(part.getLabel(), part.getLanguage()).add(entry));
+		entry.languageSpecificParts().forEach(part -> getEntriesByLabel(entry.getGlossary(), part.getLabel(), part.getLanguage()).add(entry));
 	}
 
+    @Override
+    public Iterator<GlodmedEntry> iterator() {
+        return entriesByID.values().iterator();
+    }
 }

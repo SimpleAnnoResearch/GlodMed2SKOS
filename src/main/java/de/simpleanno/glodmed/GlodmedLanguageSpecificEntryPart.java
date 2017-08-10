@@ -3,24 +3,61 @@
  */
 package de.simpleanno.glodmed;
 
-import de.simpleanno.glodmed.Glodmed.Language;
 
 /**
  * @author ralph
  */
 public class GlodmedLanguageSpecificEntryPart {
 
-	private final Language language;
-	private String label;
 	private String definition;
+	private String see;
+	private String seeAlso;
+	private String compare;
+
+    public String getSee() {
+        return see;
+    }
+
+    public void setSee(String see) {
+        this.see = see;
+    }
+
+    public String getSeeAlso() {
+        return seeAlso;
+    }
+
+    public void setSeeAlso(String seeAlso) {
+        this.seeAlso = seeAlso;
+    }
+
+    public String getCompare() {
+        return compare;
+    }
+
+    public void setCompare(String compare) {
+        this.compare = compare;
+    }
+
+    public String getReferencedLiterature() {
+        return referencedLiterature;
+    }
+
+    public void setReferencedLiterature(String referencedLiterature) {
+        this.referencedLiterature = referencedLiterature;
+    }
+
+    private String referencedLiterature;
+
 	private CompoundKey compoundKey;
 	
 	
     static class CompoundKey {
+        Glossary glossary;
 		private String term;
 		Language lang;
 
-		public CompoundKey(String term, Language lang) {
+		public CompoundKey(Glossary glossary, String term, Language lang) {
+		    this.glossary = glossary;
 			this.term = term;
 			this.lang = lang;
 		}
@@ -32,17 +69,17 @@ public class GlodmedLanguageSpecificEntryPart {
 			if (other == this)
 				return true;
 			CompoundKey o = (CompoundKey)other;
-			return o.term.equals(term) && o.lang.equals(lang);
+			return o.glossary.equals(glossary) && o.term.equals(term) && o.lang.equals(lang);
 		}
 		
 		@Override
 		public int hashCode() {
-			return 17 * term.hashCode() + 37 * lang.hashCode(); 
+			return 17 * term.hashCode() + 37 * lang.hashCode() + 53 * glossary.hashCode();
 		}
 	}
 
-	public  GlodmedLanguageSpecificEntryPart(Language language) {
-    	this.language = language;
+	public  GlodmedLanguageSpecificEntryPart(Glossary glossary, Language language) {
+        this.compoundKey = new CompoundKey(glossary, null, language);
 	}
 
 	/**
@@ -51,10 +88,8 @@ public class GlodmedLanguageSpecificEntryPart {
 	 * @param label
 	 * @param definition
 	 */
-	public GlodmedLanguageSpecificEntryPart(Language language, String label, String definition) {
-		this.language = language;
-		this.label = label;
-		this.compoundKey = new CompoundKey(label, language);
+	public GlodmedLanguageSpecificEntryPart(Glossary glossary, Language language, String label, String definition) {
+		this.compoundKey = new CompoundKey(glossary, label, language);
 		this.definition = definition;
 	}
 
@@ -63,12 +98,11 @@ public class GlodmedLanguageSpecificEntryPart {
 	 * @return the label
 	 */
 	public String getLabel() {
-		return label;
+		return compoundKey.term;
 	}
 
 	public void setLabel(String label) {
-        this.label = label;
-        this.compoundKey = new CompoundKey(label, language);
+        this.compoundKey.term = label;
 	}
 
 	/**
@@ -86,7 +120,7 @@ public class GlodmedLanguageSpecificEntryPart {
 	 * @return the language
 	 */
 	public Language getLanguage() {
-		return language;
+		return compoundKey.lang;
 	}
 
 

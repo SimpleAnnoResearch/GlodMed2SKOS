@@ -3,12 +3,6 @@
  */
 package de.simpleanno.glodmed.skos;
 
-import static de.simpleanno.glodmed.skos.Glodmed2Skos.CSVField.glossary;
-import static de.simpleanno.glodmed.skos.Glodmed2Skos.CSVField.id;
-import static de.simpleanno.glodmed.skos.Glodmed2Skos.CSVField.lang;
-import static de.simpleanno.glodmed.skos.Glodmed2Skos.CSVField.mainterm;
-import static de.simpleanno.glodmed.skos.Glodmed2Skos.CSVField.subterm;
-
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.Reader;
@@ -21,7 +15,7 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import de.simpleanno.glodmed.GlodmedLanguageSpecificEntryPart;
+import de.simpleanno.glodmed.*;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.semanticweb.skos.AddAssertion;
@@ -35,11 +29,9 @@ import org.semanticweb.skos.SKOSDataset;
 import org.semanticweb.skos.SKOSException;
 import org.semanticweb.skosapibinding.SKOSFormatExt;
 import org.semanticweb.skosapibinding.SKOSManager;
+import uk.ac.manchester.cs.skos.SKOSDataFactoryImpl;
 
-import de.simpleanno.glodmed.Glodmed;
-import de.simpleanno.glodmed.Glodmed.Glossary;
-import de.simpleanno.glodmed.Glodmed.Language;
-import de.simpleanno.glodmed.GlodmedEntry;
+import static de.simpleanno.glodmed.skos.Glodmed2Skos.CSVField.*;
 
 /**
  * @author ralph
@@ -49,7 +41,7 @@ public class Glodmed2Skos {
 	enum CSVField {id, lang, glossary, mainterm, subterm, definition, see, see_also, compare, figure_filename,
 		figure_legend, figure_source, reference_literature, unique_test};
 		
-	private static final String BASE = "http://glodmed.simple-anno.de/";
+	private static final String BASE = "http://glodmed.simple-anno.de/glodmed";
 	private static final String PREFIX = BASE + "#";
 	
 //	enum Glossary {
@@ -96,7 +88,7 @@ public class Glodmed2Skos {
 	}
 
 	private int currentId;
-	private int lastId;
+	private int lastId = -1;
 	private GlodmedEntry currentEntry;
 
 	private void transform(Reader in) throws IOException, SKOSException {
@@ -110,8 +102,10 @@ public class Glodmed2Skos {
 		
 //		HashMap<CompoundKey, SKOSConcept> conceptsByLabel = new HashMap<>();
 
-		
-		lastId = -1;
+		// We need two passes: With the first pass we get all entries, with the second pass we add the references
+		// (cannot be done in one pass because there can be references to objects that have not been created yet)
+
+		// first pass
 
 		csvParser.getRecords().stream().forEach(record -> {
 
@@ -120,15 +114,12 @@ public class Glodmed2Skos {
 			if (currentId != lastId) {
 				// new record
 
-				currentEntry = new GlodmedEntry();
+				currentEntry = new GlodmedEntry(currentId, Glossary.valueOf(record.get(glossary)));
 				glodmed.addEntry(currentEntry);
 
 				lastId = currentId;
-
-				Glossary glossary = Glossary.valueOf(record.get(CSVField.glossary));
-				currentEntry.setGlossary(glossary);
-
 			}
+
 
 
 			String mainLabel = record.get(mainterm);
@@ -142,17 +133,21 @@ public class Glodmed2Skos {
 
 				Language language = Language.valueOf(record.get(lang).toUpperCase());
 
-				GlodmedLanguageSpecificEntryPart languageSpecificEntryPart = new GlodmedLanguageSpecificEntryPart(language);
+				GlodmedLanguageSpecificEntryPart languageSpecificEntryPart = new GlodmedLanguageSpecificEntryPart(currentEntry.getGlossary(), language);
+                currentEntry.addLanguageSpecificPart(languageSpecificEntryPart);
 
 				String subLabel = record.get(subterm);
 
 				if (subLabel.isEmpty()) {
 				} else {
 					String properSubLabel = properSubtermLabel(mainLabel, subLabel);
+					subLabel = mainLabel;
+					mainLabel = properSubLabel;
+
 
 					// for debugging
 
-					System.out.format("%s, %s, %s\n", mainLabel, subLabel, properSubLabel);
+//					System.out.format("%s, %s, %s\n", mainLabel, subLabel, properSubLabel);
 
 //					List<GlodmedEntry> entriesWithSameMainLabel = glodmed.getEntriesByLabel(mainLabel, language);
 //					if (entriesWithSameMainLabel.isEmpty()) {
@@ -160,12 +155,12 @@ public class Glodmed2Skos {
 //					}
 					// end debugging
 
-					glodmed.getEntriesByLabel(mainLabel, language).forEach(entry -> {
-						if (entry.getGlossary() == currentEntry.getGlossary()) {
+//					glodmed.getEntriesByLabel(mainLabel, language).forEach(entry -> {
+//						if (entry.getGlossary() == currentEntry.getGlossary()) {
+//
+//						}
+//					});
 
-						}
-					});
-					
 				}
 
 
@@ -173,12 +168,17 @@ public class Glodmed2Skos {
 				mainLabel = stripMarkup(mainLabel);
 				subLabel = stripMarkup(subLabel);
 				
-
+                languageSpecificEntryPart.setLabel(mainLabel);
+                languageSpecificEntryPart.setDefinition(record.get(definition));
+                languageSpecificEntryPart.setSee(record.get(see));
+                languageSpecificEntryPart.setSeeAlso(record.get(see_also));
+                languageSpecificEntryPart.setCompare(record.get(compare));
+                languageSpecificEntryPart.setReferencedLiterature(record.get(reference_literature));
 			}
 			
 		});
 		
-/*
+
 		// construct SKOS ontology
 		
 		HashSet<SKOSConcept> concepts = new HashSet<>();		
@@ -188,48 +188,69 @@ public class Glodmed2Skos {
 		
 		SKOSDataset ds = mgr.createSKOSDataset(URI.create(BASE));
 		
-        SKOSConceptScheme cs = df.getSKOSConceptScheme(uri("glodmed"));
+        HashMap<Glossary, SKOSConceptScheme> conceptSchemes = new HashMap<>();
+
+        conceptSchemes.put(Glossary.GOMI, df.getSKOSConceptScheme(uri("gomi")));
+        conceptSchemes.put(Glossary.GOOT, df.getSKOSConceptScheme(uri("goot")));
+
+        ArrayList<SKOSChange> changes = new ArrayList<>();
+        changes.add(new AddAssertion(ds, df.getSKOSEntityAssertion(conceptSchemes.get(Glossary.GOMI))));
+        changes.add(new AddAssertion(ds, df.getSKOSEntityAssertion(conceptSchemes.get(Glossary.GOOT))));
+
+        glodmed.forEach(entry -> {
+            SKOSConcept concept = df.getSKOSConcept(uri("" + entry.getId()));
+
+            changes.add(new AddAssertion(ds, df.getSKOSEntityAssertion(concept)));
+
+            changes.add(new AddAssertion(ds, df.getSKOSObjectRelationAssertion(concept, df.getSKOSInSchemeProperty(), conceptSchemes.get(entry.getGlossary()))));
+
+            entry.languageSpecificParts().forEach(part -> {
+
+                String language = part.getLanguage().name().toLowerCase();
+
+                SKOSAnnotation prefLabelAnnotation = df.getSKOSAnnotation(df.getSKOSPrefLabelProperty().getURI(), part.getLabel(), language);
+                SKOSAnnotationAssertion prefLabelAnnotationAssertion = df.getSKOSAnnotationAssertion(concept, prefLabelAnnotation);
+                changes.add(new AddAssertion(ds, prefLabelAnnotationAssertion));
+
+                SKOSAnnotation definitionDP= df.getSKOSAnnotation(df.getSKOSDefinitionDataProperty().getURI(), part.getDefinition(), language);
+                SKOSAnnotationAssertion definitionAnnotationAssertion = df.getSKOSAnnotationAssertion(concept, definitionDP);
+                changes.add(new AddAssertion(ds, definitionAnnotationAssertion));
+
+                SKOSAnnotation definedByDP= df.getSKOSAnnotation(URI.create("http://www.w3.org/2000/01/rdf-schema#isDefinedBy"), part.getSee());
+                SKOSAnnotationAssertion definedByAnnotationAssertion = df.getSKOSAnnotationAssertion(concept, definedByDP);
+                changes.add(new AddAssertion(ds, definedByAnnotationAssertion));
+
+                SKOSAnnotation seeAlsoAnnotation = df.getSKOSAnnotation(URI.create("http://www.w3.org/2000/01/rdf-schema#seeAlso"), part.getSeeAlso());
+                SKOSAnnotationAssertion seeAlsoAnnotationAssertion = df.getSKOSAnnotationAssertion(concept, seeAlsoAnnotation);
+                changes.add(new AddAssertion(ds, seeAlsoAnnotationAssertion));
+
+                SKOSAnnotation relatedDP= df.getSKOSAnnotation(df.getSKOSRelatedProperty().getURI(), part.getCompare(), language);
+                SKOSAnnotationAssertion relatedAnnotationAssertion = df.getSKOSAnnotationAssertion(concept, relatedDP);
+                changes.add(new AddAssertion(ds, relatedAnnotationAssertion));
+
+            });
 
 
-		SKOSConcept concept = df.getSKOSConcept(uri(termID));
+//            if (conceptsByLabel.containsKey(key)) {
+//                String subTermLabel = record.get(subterm);
+//                if (subTermLabel.isEmpty()) {
+////						System.out.println(termID + " Double label: " + mainLabel + " (" + conceptsByLabel.get(key).getURI() + ")");
+//                }
+//            }
+//
+//            conceptsByLabel.put(key, concept);
 
-		if (!concepts.contains(concept)) {
-
-			System.out.println("New: " + concept.getURI());
-
-			// we encounter this id for the first time: create new concept with this id
-			concepts.add(concept);
-			changes.add(new AddAssertion(ds, df.getSKOSEntityAssertion(concept)));
-
-			changes.add(new AddAssertion(ds, df.getSKOSObjectRelationAssertion(concept, df.getSKOSInSchemeProperty(), cs)));
-		}
+        });
 
 
 
 
-		if (conceptsByLabel.containsKey(key)) {
-			String subTermLabel = record.get(subterm);
-			if (subTermLabel.isEmpty()) {
-//						System.out.println(termID + " Double label: " + mainLabel + " (" + conceptsByLabel.get(key).getURI() + ")");
-			}
-		}
-
-		conceptsByLabel.put(key, concept);
-
-		// preferred label
-		SKOSAnnotation prefLabelAnnotation = df.getSKOSAnnotation(df.getSKOSPrefLabelProperty().getURI(), mainLabel, language);
-		SKOSAnnotationAssertion prefLabelAnnotationAssertion = df.getSKOSAnnotationAssertion(concept, prefLabelAnnotation);
-		changes.add(new AddAssertion(ds, prefLabelAnnotationAssertion));
-
-
-		ArrayList<SKOSChange> changes = new ArrayList<>();
-		changes.add(new AddAssertion(ds, df.getSKOSEntityAssertion(cs)));
 
 		
 		mgr.applyChanges(changes);
 		
-//		mgr.save(ds, SKOSFormatExt.RDFXML, URI.create("file:/tmp/glodmed-skos.rdf"));
-*/
+		mgr.save(ds, SKOSFormatExt.RDFXML, URI.create("file:/tmp/glodmed-skos.rdf"));
+
 	}
 	
 	private URI uri (String localname) {

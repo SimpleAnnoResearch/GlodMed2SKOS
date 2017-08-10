@@ -9,9 +9,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
 
-import de.simpleanno.glodmed.Glodmed.Glossary;
-import de.simpleanno.glodmed.Glodmed.Language;;
-
 /**
  * @author ralph
  */
@@ -30,8 +27,9 @@ public class GlodmedEntry {
 	/**
 	 * 
 	 */
-	public GlodmedEntry() {
-		// TODO Auto-generated constructor stub
+	public GlodmedEntry(int id, Glossary glossary) {
+		this.id = id;
+		this.glossary = glossary;
 	}
 
 
@@ -64,7 +62,7 @@ public class GlodmedEntry {
 
 
 	/**
-	 * @param languageSpecificParts the languageSpecificParts to set
+	 * @param languageSpecificPart the languageSpecificParts to set
 	 */
 	public void addLanguageSpecificPart(GlodmedLanguageSpecificEntryPart languageSpecificPart) {
 		languageSpecificParts.put(languageSpecificPart.getLanguage(), languageSpecificPart);
