@@ -1,7 +1,0 @@
-/**
- * 
- */
-/**
- * @author ralph
- */
-package examples;
