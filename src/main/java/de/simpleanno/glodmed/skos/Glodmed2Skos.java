@@ -3,25 +3,28 @@
  */
 package de.simpleanno.glodmed.skos;
 
+import de.simpleanno.glodmed.*;
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVParser;
+import org.semanticweb.owlapi.io.OWLFunctionalSyntaxOntologyFormat;
+import org.semanticweb.owlapi.model.OWLOntology;
+import org.semanticweb.owlapi.model.OWLOntologyManager;
+import org.semanticweb.owlapi.model.OWLOntologyStorageException;
+import org.semanticweb.skos.*;
+import org.semanticweb.skosapibinding.SKOSFormatExt;
+import org.semanticweb.skosapibinding.SKOSManager;
+import org.semanticweb.skosapibinding.SKOStoOWLConverter;
+
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.Reader;
-import java.lang.reflect.GenericArrayType;
 import java.net.URI;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import de.simpleanno.glodmed.*;
-import org.apache.commons.csv.CSVFormat;
-import org.apache.commons.csv.CSVParser;
-import org.semanticweb.skos.*;
-import org.semanticweb.skosapibinding.SKOSFormatExt;
-import org.semanticweb.skosapibinding.SKOSManager;
-import uk.ac.manchester.cs.skos.SKOSDataFactoryImpl;
-
 import static de.simpleanno.glodmed.skos.Glodmed2Skos.CSVField.*;
-import static de.simpleanno.glodmed.skos.Glodmed2Skos.CSVField.definition;
 
 /**
  * @author ralph
@@ -33,41 +36,7 @@ public class Glodmed2Skos {
 		
 	private static final String BASE = "http://glodmed.simple-anno.de/glodmed";
 	private static final String PREFIX = BASE + "#";
-	
-//	enum Glossary {
-//		
-//		GOMI, GOOT;
-//		
-//		String getIRI() {
-//			return PREFIX + name();
-//		}
-//	};
 
-//	private static class CompoundKey {
-//		private String term, lang, glossary;
-//
-//		public CompoundKey(String term, String lang, String glossary) {
-//			this.term = term;
-//			this.lang = lang;
-//			this.glossary = glossary;
-//		}
-//		
-//		@Override
-//		public boolean equals(Object other) {
-//			if (!(other instanceof CompoundKey))
-//				return false;
-//			if (other == this)
-//				return true;
-//			CompoundKey o = (CompoundKey)other;
-//			return o.term.equals(term) && o.lang.equals(lang) && o.glossary.equals(glossary);
-//		}
-//		
-//		@Override
-//		public int hashCode() {
-//			return 13 * term.hashCode() + 37 * lang.hashCode() + 41 * glossary.hashCode(); 
-//		}
-//	}
-	
 	private final Pattern markupPattern = Pattern.compile("\\[.*?\\]|<.*?>"); 
 
 	/**
@@ -84,13 +53,8 @@ public class Glodmed2Skos {
 	private void transform(Reader in) throws IOException, SKOSException {
 
 		CSVParser csvParser = CSVFormat.newFormat(',').withFirstRecordAsHeader().withQuote('"').parse(in);
-		
-//		csvParser.getHeaderMap().keySet().stream().forEach(header -> System.out.println(header));		
-//		System.out.println("\n\n");
-		
+
 		Glodmed glodmed = Glodmed.instance();
-		
-//		HashMap<CompoundKey, SKOSConcept> conceptsByLabel = new HashMap<>();
 
 		// We need two passes: With the first pass we get all entries, with the second pass we add the references
 		// (cannot be done in one pass because there can be references to objects that have not been created yet)
@@ -112,7 +76,6 @@ public class Glodmed2Skos {
 
 				lastId = currentId;
 			}
-
 
 
 			String mainLabel = record.get(mainterm);
@@ -143,7 +106,6 @@ public class Glodmed2Skos {
                     languageSpecificEntryPart.setSuperTerm(subLabel);
 				}
 
-
                 languageSpecificEntryPart.setLabel(mainLabel);
                 languageSpecificEntryPart.setDefinition(record.get(definition));
                 languageSpecificEntryPart.setSee(record.get(see));
@@ -157,6 +119,7 @@ public class Glodmed2Skos {
 		// add the last one
         glodmed.addEntry(currentEntry);
 
+        // second pass
 		// construct SKOS ontology
 		
 		HashSet<SKOSConcept> concepts = new HashSet<>();		
@@ -238,16 +201,6 @@ public class Glodmed2Skos {
 
             });
 
-
-//            if (conceptsByLabel.containsKey(key)) {
-//                String subTermLabel = record.get(subterm);
-//                if (subTermLabel.isEmpty()) {
-////						System.out.println(termID + " Double label: " + mainLabel + " (" + conceptsByLabel.get(key).getURI() + ")");
-//                }
-//            }
-//
-//            conceptsByLabel.put(key, concept);
-
         });
 
 
@@ -259,7 +212,16 @@ public class Glodmed2Skos {
 		
 		mgr.save(ds, SKOSFormatExt.RDFXML, URI.create("file:/tmp/glodmed-skos.rdf"));
 
-	}
+        SKOStoOWLConverter converter = new SKOStoOWLConverter();
+        OWLOntology onto = converter.getAsOWLOntology(ds);
+        OWLOntologyManager man = onto.getOWLOntologyManager();
+        try {
+            man.saveOntology(onto, new OWLFunctionalSyntaxOntologyFormat(), new FileOutputStream("/tmp/glodmed-skos.ofn"));
+        } catch (OWLOntologyStorageException e) {
+            e.printStackTrace();
+        }
+
+    }
 	
 	private URI uri (String localname) {
 		return URI.create(BASE + "#" + localname);
