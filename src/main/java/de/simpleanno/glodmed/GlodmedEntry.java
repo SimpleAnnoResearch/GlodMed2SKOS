@@ -22,6 +22,8 @@ public class GlodmedEntry {
 	private ArrayList<Integer> seeRefs = new ArrayList<>();
 	private ArrayList<Integer> seeAlsoRefs = new ArrayList<>();
 	private ArrayList<Integer> compareRefs = new ArrayList<>();
+
+	private GlodmedEntry superEntry;
 	
 	
 	/**
@@ -130,5 +132,19 @@ public class GlodmedEntry {
 	public void addCompareRef(int compareRef) {
 		this.compareRefs.add(compareRef);
 	}
+
+	public GlodmedEntry getSuperEntry() {
+		return superEntry;
+	}
+
+	public boolean hasSuperEntry() {
+		return superEntry != null;
+	}
+
+	public void setSuperEntry(GlodmedEntry superEntry) {
+		this.superEntry = superEntry;
+	}
+
+
 
 }

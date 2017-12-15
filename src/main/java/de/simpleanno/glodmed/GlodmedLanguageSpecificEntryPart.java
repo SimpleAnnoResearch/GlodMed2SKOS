@@ -14,6 +14,8 @@ public class GlodmedLanguageSpecificEntryPart {
 	private String seeAlso;
 	private String compare;
 
+	private String superTerm;
+
     public String getSee() {
         return see;
     }
@@ -116,7 +118,16 @@ public class GlodmedLanguageSpecificEntryPart {
         this.definition = definition;
     }
 
-    /**
+	public String getSuperTerm() {
+		return superTerm;
+	}
+
+	public void setSuperTerm(String superTerm) {
+		this.superTerm = superTerm;
+	}
+
+
+	/**
 	 * @return the language
 	 */
 	public Language getLanguage() {
@@ -130,7 +141,7 @@ public class GlodmedLanguageSpecificEntryPart {
 	public CompoundKey getCompoundKey() {
 		return compoundKey;
 	}
-	
-	
+
+
 
 }

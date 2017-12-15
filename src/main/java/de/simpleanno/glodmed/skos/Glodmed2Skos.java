@@ -15,15 +15,7 @@ import java.util.regex.Pattern;
 import de.simpleanno.glodmed.*;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
-import org.semanticweb.skos.AddAssertion;
-import org.semanticweb.skos.SKOSAnnotation;
-import org.semanticweb.skos.SKOSAnnotationAssertion;
-import org.semanticweb.skos.SKOSChange;
-import org.semanticweb.skos.SKOSConcept;
-import org.semanticweb.skos.SKOSConceptScheme;
-import org.semanticweb.skos.SKOSDataFactory;
-import org.semanticweb.skos.SKOSDataset;
-import org.semanticweb.skos.SKOSException;
+import org.semanticweb.skos.*;
 import org.semanticweb.skosapibinding.SKOSFormatExt;
 import org.semanticweb.skosapibinding.SKOSManager;
 import uk.ac.manchester.cs.skos.SKOSDataFactoryImpl;
@@ -112,8 +104,11 @@ public class Glodmed2Skos {
 			if (currentId != lastId) {
 				// new record
 
+                if (currentEntry != null) {
+                    glodmed.addEntry(currentEntry);
+                }
+
 				currentEntry = new GlodmedEntry(currentId, Glossary.valueOf(record.get(glossary)));
-				glodmed.addEntry(currentEntry);
 
 				lastId = currentId;
 			}
@@ -134,38 +129,21 @@ public class Glodmed2Skos {
 				GlodmedLanguageSpecificEntryPart languageSpecificEntryPart = new GlodmedLanguageSpecificEntryPart(currentEntry.getGlossary(), language);
                 currentEntry.addLanguageSpecificPart(languageSpecificEntryPart);
 
-				String subLabel = record.get(subterm);
+                mainLabel = stripMarkup(mainLabel);
 
-				if (subLabel.isEmpty()) {
-				} else {
+                String subLabel = record.get(subterm);
+
+				if (!subLabel.isEmpty()) {
+                    subLabel = stripMarkup(subLabel);
+
 					String properSubLabel = properSubtermLabel(mainLabel, subLabel);
 					subLabel = mainLabel;
 					mainLabel = properSubLabel;
 
-
-					// for debugging
-
-//					System.out.format("%s, %s, %s\n", mainLabel, subLabel, properSubLabel);
-
-//					List<GlodmedEntry> entriesWithSameMainLabel = glodmed.getEntriesByLabel(mainLabel, language);
-//					if (entriesWithSameMainLabel.isEmpty()) {
-//						System.out.format("Missing main term: %s\n", mainLabel);
-//					}
-					// end debugging
-
-//					glodmed.getEntriesByLabel(mainLabel, language).forEach(entry -> {
-//						if (entry.getGlossary() == currentEntry.getGlossary()) {
-//
-//						}
-//					});
-
+                    languageSpecificEntryPart.setSuperTerm(subLabel);
 				}
 
 
-				// strip markup
-				mainLabel = stripMarkup(mainLabel);
-				subLabel = stripMarkup(subLabel);
-				
                 languageSpecificEntryPart.setLabel(mainLabel);
                 languageSpecificEntryPart.setDefinition(record.get(definition));
                 languageSpecificEntryPart.setSee(record.get(see));
@@ -175,7 +153,9 @@ public class Glodmed2Skos {
 			}
 			
 		});
-		
+
+		// add the last one
+        glodmed.addEntry(currentEntry);
 
 		// construct SKOS ontology
 		
@@ -202,18 +182,36 @@ public class Glodmed2Skos {
 
             changes.add(new AddAssertion(ds, df.getSKOSObjectRelationAssertion(concept, df.getSKOSInSchemeProperty(), conceptSchemes.get(entry.getGlossary()))));
 
+            BooleanFlag superTermHandled = new BooleanFlag();
+
             entry.languageSpecificParts().forEach(part -> {
 
-                String language = part.getLanguage().name().toLowerCase();
+                Language language = part.getLanguage();
+                String languageCode = language.name().toLowerCase();
+
+                if (!superTermHandled.value) {
+                    String superLabel = part.getSuperTerm();
+                    if (superLabel != null) {
+                        List<GlodmedEntry> superEntries = glodmed.getEntriesByLabel(entry.getGlossary(), part.getSuperTerm(), language);
+                        superEntries.forEach(superEntry -> {
+                            SKOSObjectRelationAssertion broaderRelationAssertion = df.getSKOSObjectRelationAssertion(concept, df.getSKOSBroaderProperty(), df.getSKOSConcept(uri("" + superEntry.getId())));
+                            changes.add(new AddAssertion(ds, broaderRelationAssertion));
+                        });
+                    }
+                }
+
+                // Super term references are stored redundantly for each language in glodmed. We only need to take care
+                // of them once per entry.
+                superTermHandled.value = true;
 
 				Optional.of(part.getLabel()).filter(s -> !s.isEmpty()).ifPresent(label -> {
-					SKOSAnnotation prefLabelAnnotation = df.getSKOSAnnotation(df.getSKOSPrefLabelProperty().getURI(), label, language);
+					SKOSAnnotation prefLabelAnnotation = df.getSKOSAnnotation(df.getSKOSPrefLabelProperty().getURI(), label, languageCode);
 					SKOSAnnotationAssertion prefLabelAnnotationAssertion = df.getSKOSAnnotationAssertion(concept, prefLabelAnnotation);
 					changes.add(new AddAssertion(ds, prefLabelAnnotationAssertion));
 				});
 
 				Optional.of(part.getDefinition()).filter(s -> !s.isEmpty()).ifPresent(definition -> {
-					SKOSAnnotation definitionDP= df.getSKOSAnnotation(df.getSKOSDefinitionDataProperty().getURI(), definition, language);
+					SKOSAnnotation definitionDP= df.getSKOSAnnotation(df.getSKOSDefinitionDataProperty().getURI(), definition, languageCode);
 					SKOSAnnotationAssertion definitionAnnotationAssertion = df.getSKOSAnnotationAssertion(concept, definitionDP);
 					changes.add(new AddAssertion(ds, definitionAnnotationAssertion));
 				});
@@ -231,10 +229,12 @@ public class Glodmed2Skos {
 				});
 
 				Optional.of(part.getCompare()).filter(s -> !s.isEmpty()).ifPresent(compare -> {
-					SKOSAnnotation relatedDP= df.getSKOSAnnotation(df.getSKOSRelatedProperty().getURI(), compare, language);
+					SKOSAnnotation relatedDP= df.getSKOSAnnotation(df.getSKOSRelatedProperty().getURI(), compare, languageCode);
 					SKOSAnnotationAssertion relatedAnnotationAssertion = df.getSKOSAnnotationAssertion(concept, relatedDP);
 					changes.add(new AddAssertion(ds, relatedAnnotationAssertion));
 				});
+
+
 
             });
 
@@ -284,6 +284,11 @@ public class Glodmed2Skos {
 	private GlodmedEntry getPropertGlodmedEntry(String mainterm, String subterm) {
 		return null;
 	}
+
+	// boolean flag for use inside lambdas
+	private class BooleanFlag {
+        public boolean value = false;
+    }
 
 	/**
 	 * @param args
