@@ -150,7 +150,7 @@ public class Glodmed2Skos {
             entry.languageSpecificParts().forEach(part -> {
 
                 Language language = part.getLanguage();
-                String languageCode = language.name().toLowerCase();
+                String languageCode = language.isoCode;
 
                 if (!superTermHandled.value) {
                     String superLabel = part.getSuperTerm();
