@@ -20,6 +20,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.Reader;
 import java.net.URI;
+import java.net.URLEncoder;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -109,7 +110,7 @@ public class Glodmed2Skos {
                 languageSpecificEntryPart.setLabel(mainLabel);
                 languageSpecificEntryPart.setDefinition(record.get(definition));
                 languageSpecificEntryPart.setSee(record.get(see));
-                languageSpecificEntryPart.setSeeAlso(record.get(see_also));
+                languageSpecificEntryPart.setSeeAlso(stripMarkup(record.get(see_also)));
                 languageSpecificEntryPart.setCompare(record.get(compare));
                 languageSpecificEntryPart.setReferencedLiterature(record.get(reference_literature));
 			}
@@ -174,7 +175,7 @@ public class Glodmed2Skos {
 				});
 
 				Optional.of(part.getDefinition()).filter(s -> !s.isEmpty()).ifPresent(definition -> {
-					SKOSAnnotation definitionDP= df.getSKOSAnnotation(df.getSKOSDefinitionDataProperty().getURI(), definition, languageCode);
+					SKOSAnnotation definitionDP= df.getSKOSAnnotation(df.getSKOSDefinitionDataProperty().getURI(), URLEncoder.encode(definition), languageCode);
 					SKOSAnnotationAssertion definitionAnnotationAssertion = df.getSKOSAnnotationAssertion(concept, definitionDP);
 					changes.add(new AddAssertion(ds, definitionAnnotationAssertion));
 				});
