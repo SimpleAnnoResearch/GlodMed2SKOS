@@ -4,6 +4,12 @@
   <artifactId>SimpleAnnoNLP</artifactId>
   <version>0.0.1-SNAPSHOT</version>
   <name>SimpleAnno NLP toolchain implementation and testing</name>
+	<repositories>
+		<repository>
+			<id>local</id>
+			<url>file://${basedir}/lib</url>
+		</repository>
+	</repositories>
   <build>
   	<plugins>
   		<plugin>
@@ -34,8 +40,8 @@
   		<version>2.7.8</version>
   	</dependency>
   	<dependency>
-  		<groupId>skos-api</groupId>
-  		<artifactId>distribution</artifactId>
+  		<groupId>simon-jupp</groupId>
+  		<artifactId>java-skos-api</artifactId>
   		<version>3.1</version>
   	</dependency>
   </dependencies>
