@@ -33,6 +33,8 @@ public class Glodmed2OWL {
 
     private final Pattern markupPattern = Pattern.compile("\\[.*?\\]|<.*?>");
 
+    private static final IRI GLODMED_CLASS_IRI = IRI.create("http://simple-anno.de/ontologies/dental_care_process#GLODMED");
+
     /**
      *
      */
@@ -124,6 +126,8 @@ public class Glodmed2OWL {
 
         OWLOntology ontology = mgr.createOntology(iri(""));
 
+        OWLClass glodmedClass = df.getOWLClass(GLODMED_CLASS_IRI);
+
         HashMap<Glossary, OWLNamedIndividual> glossaries = new HashMap<>();
 
         glossaries.put(Glossary.GOMI, df.getOWLNamedIndividual(iri( "GOMI")));
@@ -139,6 +143,8 @@ public class Glodmed2OWL {
             OWLClass clazz = df.getOWLClass(iri("" + entry.getId()));
 
             changes.add(new AddAxiom(ontology, df.getOWLDeclarationAxiom(clazz)));
+
+            changes.add(new AddAxiom(ontology, df.getOWLSubClassOfAxiom(clazz, glodmedClass)));
 
             changes.add(new AddAxiom(ontology, df.getOWLAnnotationAssertionAxiom(clazz.getIRI(), df.getOWLAnnotation(glossaryProp, glossaries.get(entry.getGlossary()).getIRI()))));
 
@@ -202,7 +208,7 @@ public class Glodmed2OWL {
 
         mgr.applyChanges(changes);
 
-        mgr.saveOntology(ontology, new OWLFunctionalSyntaxOntologyFormat(), new FileOutputStream("/tmp/glodmed-skos.ofn"));
+        mgr.saveOntology(ontology, new OWLFunctionalSyntaxOntologyFormat(), new FileOutputStream("/tmp/qv_glodmed-2016.owl"));
 
     }
 
