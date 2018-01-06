@@ -79,7 +79,7 @@ public class Glodmed2Skos {
 			}
 
 
-			String mainLabel = record.get(mainterm);
+			String mainLabel = record.get(mainterm).trim();
 			
 						
 			// mainterm empty: bad record (should not happen)
@@ -88,14 +88,14 @@ public class Glodmed2Skos {
 			
 			if (!mainLabel.isEmpty()) {
 
-				Language language = Language.valueOf(record.get(lang).toUpperCase());
+				Language language = Language.valueOf(record.get(lang).trim().toUpperCase());
 
 				GlodmedLanguageSpecificEntryPart languageSpecificEntryPart = new GlodmedLanguageSpecificEntryPart(currentEntry.getGlossary(), language);
                 currentEntry.addLanguageSpecificPart(languageSpecificEntryPart);
 
                 mainLabel = stripMarkup(mainLabel);
 
-                String subLabel = record.get(subterm);
+                String subLabel = record.get(subterm).trim();
 
 				if (!subLabel.isEmpty()) {
                     subLabel = stripMarkup(subLabel);
@@ -108,11 +108,11 @@ public class Glodmed2Skos {
 				}
 
                 languageSpecificEntryPart.setLabel(mainLabel);
-                languageSpecificEntryPart.setDefinition(record.get(definition));
-                languageSpecificEntryPart.setSee(record.get(see));
-                languageSpecificEntryPart.setSeeAlso(stripMarkup(record.get(see_also)));
-                languageSpecificEntryPart.setCompare(record.get(compare));
-                languageSpecificEntryPart.setReferencedLiterature(record.get(reference_literature));
+                languageSpecificEntryPart.setDefinition(record.get(definition).trim());
+                languageSpecificEntryPart.setSee(record.get(see).trim());
+                languageSpecificEntryPart.setSeeAlso(stripMarkup(record.get(see_also).trim()));
+                languageSpecificEntryPart.setCompare(record.get(compare).trim());
+                languageSpecificEntryPart.setReferencedLiterature(record.get(reference_literature).trim());
 			}
 			
 		});
@@ -181,21 +181,33 @@ public class Glodmed2Skos {
 				});
 
 				Optional.of(part.getSee()).filter(s -> !s.isEmpty()).ifPresent(see -> {
-					SKOSAnnotation definedByDP = df.getSKOSAnnotation(URI.create("http://www.w3.org/2000/01/rdf-schema#isDefinedBy"), see);
-					SKOSAnnotationAssertion definedByAnnotationAssertion = df.getSKOSAnnotationAssertion(concept, definedByDP);
-					changes.add(new AddAssertion(ds, definedByAnnotationAssertion));
+					Arrays.stream(see.split(";")).forEach(seeTerm -> {
+						glodmed.getEntriesByLabel(entry.getGlossary(), seeTerm.trim(), language).forEach(referencedEntry -> {
+							SKOSAnnotation definedByDP = df.getSKOSAnnotation(URI.create("http://www.w3.org/2000/01/rdf-schema#isDefinedBy"), df.getSKOSConcept(uri(""+referencedEntry.getId())));
+							SKOSAnnotationAssertion definedByAnnotationAssertion = df.getSKOSAnnotationAssertion(concept, definedByDP);
+							changes.add(new AddAssertion(ds, definedByAnnotationAssertion));
+						});
+					});
 				});
 
 				Optional.of(part.getSeeAlso()).filter(s -> !s.isEmpty()).ifPresent(seeAlso -> {
-					SKOSAnnotation seeAlsoAnnotation = df.getSKOSAnnotation(URI.create("http://www.w3.org/2000/01/rdf-schema#seeAlso"), seeAlso);
-					SKOSAnnotationAssertion seeAlsoAnnotationAssertion = df.getSKOSAnnotationAssertion(concept, seeAlsoAnnotation);
-					changes.add(new AddAssertion(ds, seeAlsoAnnotationAssertion));
+					Arrays.stream(seeAlso.split(";")).forEach(seeAlsoTerm -> {
+						glodmed.getEntriesByLabel(entry.getGlossary(), seeAlsoTerm.trim(), language).forEach(referencedEntry -> {
+							SKOSAnnotation seeAlsoAnnotation = df.getSKOSAnnotation(URI.create("http://www.w3.org/2000/01/rdf-schema#seeAlso"), df.getSKOSConcept(uri("" + referencedEntry.getId())));
+							SKOSAnnotationAssertion seeAlsoAnnotationAssertion = df.getSKOSAnnotationAssertion(concept, seeAlsoAnnotation);
+							changes.add(new AddAssertion(ds, seeAlsoAnnotationAssertion));
+						});
+					});
 				});
 
 				Optional.of(part.getCompare()).filter(s -> !s.isEmpty()).ifPresent(compare -> {
-					SKOSAnnotation relatedDP= df.getSKOSAnnotation(df.getSKOSRelatedProperty().getURI(), compare, languageCode);
-					SKOSAnnotationAssertion relatedAnnotationAssertion = df.getSKOSAnnotationAssertion(concept, relatedDP);
-					changes.add(new AddAssertion(ds, relatedAnnotationAssertion));
+					Arrays.stream(compare.split(";")).forEach(compareTerm -> {
+						glodmed.getEntriesByLabel(entry.getGlossary(), compareTerm.trim(), language).forEach(referencedEntry -> {
+							SKOSAnnotation relatedDP= df.getSKOSAnnotation(df.getSKOSRelatedProperty().getURI(), df.getSKOSConcept(uri(""+referencedEntry.getId())));
+							SKOSAnnotationAssertion relatedAnnotationAssertion = df.getSKOSAnnotationAssertion(concept, relatedDP);
+							changes.add(new AddAssertion(ds, relatedAnnotationAssertion));
+						});
+					});
 				});
 
 
