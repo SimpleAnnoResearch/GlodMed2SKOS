@@ -6,7 +6,7 @@
   <name>SimpleAnno NLP toolchain implementation and testing</name>
 	<repositories>
 		<repository>
-			<id>local</id>
+			<id>glodmed2skos-localrepo</id>
 			<url>file://${basedir}/lib</url>
 		</repository>
 	</repositories>
@@ -39,10 +39,11 @@
   		<artifactId>sesame-rio-rdfxml</artifactId>
   		<version>2.7.8</version>
   	</dependency>
-  	<dependency>
-  		<groupId>simon-jupp</groupId>
-  		<artifactId>java-skos-api</artifactId>
-  		<version>3.1</version>
-  	</dependency>
+	  <dependency>
+		  <groupId>skos-api</groupId>
+		  <artifactId>skos-api</artifactId>
+		  <version>3.2</version>
+		  <type>jar</type>
+	  </dependency>
   </dependencies>
 </project>
