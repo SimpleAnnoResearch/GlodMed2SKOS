@@ -6,6 +6,7 @@ package de.simpleanno.glodmed.skos;
 import de.simpleanno.glodmed.*;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
+import org.apache.commons.text.StringEscapeUtils;
 import org.semanticweb.owlapi.io.OWLFunctionalSyntaxOntologyFormat;
 import org.semanticweb.owlapi.model.OWLOntology;
 import org.semanticweb.owlapi.model.OWLOntologyManager;
@@ -20,7 +21,6 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.Reader;
 import java.net.URI;
-import java.net.URLEncoder;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -175,7 +175,7 @@ public class Glodmed2Skos {
 				});
 
 				Optional.of(part.getDefinition()).filter(s -> !s.isEmpty()).ifPresent(definition -> {
-					SKOSAnnotation definitionDP= df.getSKOSAnnotation(df.getSKOSDefinitionDataProperty().getURI(), URLEncoder.encode(definition), languageCode);
+					SKOSAnnotation definitionDP= df.getSKOSAnnotation(df.getSKOSDefinitionDataProperty().getURI(), StringEscapeUtils.escapeXml10(definition).trim(), languageCode);
 					SKOSAnnotationAssertion definitionAnnotationAssertion = df.getSKOSAnnotationAssertion(concept, definitionDP);
 					changes.add(new AddAssertion(ds, definitionAnnotationAssertion));
 				});
