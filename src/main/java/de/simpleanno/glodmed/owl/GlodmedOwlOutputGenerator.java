@@ -9,6 +9,7 @@ import org.semanticweb.owlapi.apibinding.OWLManager;
 import org.semanticweb.owlapi.io.OWLFunctionalSyntaxOntologyFormat;
 import org.semanticweb.owlapi.model.*;
 
+import java.io.File;
 import java.io.FileOutputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -30,7 +31,7 @@ public class GlodmedOwlOutputGenerator extends GlodmedOutputGenerator {
 
     private ArrayList<OWLOntologyChange> changes = new ArrayList<>();
 
-    private OWLAnnotationProperty glossaryProp = df.getOWLAnnotationProperty(iri("glossary"));
+    private OWLAnnotationProperty glossaryProp;
 
     private OWLClass clazz;
 
@@ -42,6 +43,7 @@ public class GlodmedOwlOutputGenerator extends GlodmedOutputGenerator {
         ontology = mgr.createOntology(iri(""));
 
         glodmedClass = df.getOWLClass(GLODMED_CLASS_IRI);
+        glossaryProp = df.getOWLAnnotationProperty(iri("glossary"));
 
         glossaries.put(Glossary.GOMI, df.getOWLNamedIndividual(iri( "GOMI")));
         glossaries.put(Glossary.GOOT, df.getOWLNamedIndividual(iri( "GOOT")));
@@ -96,9 +98,9 @@ public class GlodmedOwlOutputGenerator extends GlodmedOutputGenerator {
     }
 
     @Override
-    public void saveOutput(String destination) throws Exception {
+    public void saveOutput(File destination) throws Exception {
         mgr.applyChanges(changes);
-        mgr.saveOntology(ontology, new OWLFunctionalSyntaxOntologyFormat(), iri(destination));
+        mgr.saveOntology(ontology, new OWLFunctionalSyntaxOntologyFormat(), IRI.create(destination));
     }
 
     private IRI iri(String localname) {

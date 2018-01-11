@@ -3,8 +3,7 @@ package de.simpleanno.glodmed.skos;
 import de.simpleanno.glodmed.Glodmed;
 import org.semanticweb.skosapibinding.SKOSFormatExt;
 
-import java.io.OutputStream;
-import java.net.URI;
+import java.io.File;
 
 public class GlodmedSkosRdfOutputGenerator extends GlodmedSkosOutputGenerator {
 
@@ -13,8 +12,8 @@ public class GlodmedSkosRdfOutputGenerator extends GlodmedSkosOutputGenerator {
     }
 
     @Override
-    public void saveOutput(String destination) throws Exception {
+    public void saveOutput(File destination) throws Exception {
         mgr.applyChanges(changes);
-        mgr.save(ds, SKOSFormatExt.RDFXML, URI.create("file:"+ destination));
+        mgr.save(ds, SKOSFormatExt.RDFXML, destination.toURI());
     }
 }

@@ -1,6 +1,8 @@
 package de.simpleanno.glodmed;
 
 
+import java.io.File;
+
 public abstract class GlodmedOutputGenerator {
 
     protected Glodmed glodmed;
@@ -27,6 +29,6 @@ public abstract class GlodmedOutputGenerator {
     public abstract void addCompareRelation(String destinationID);
 
 
-    public abstract void saveOutput(String destination) throws Exception;
+    public abstract void saveOutput(File destination) throws Exception;
 
 }

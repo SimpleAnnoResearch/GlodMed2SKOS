@@ -9,6 +9,7 @@ import org.apache.commons.csv.CSVParser;
 import java.io.File;
 import java.io.FileReader;
 import java.io.Reader;
+import java.lang.reflect.Constructor;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -33,7 +34,7 @@ public class GlodmedConverter {
     private int lastId = -1;
     private GlodmedEntry currentEntry;
 
-    private void transform(Reader in, String destination) throws Exception {
+    private void transform(Mode mode, Reader in, File destination) throws Exception {
 
         CSVParser csvParser = CSVFormat.newFormat(',').withFirstRecordAsHeader().withQuote('"').parse(in);
 
@@ -105,7 +106,8 @@ public class GlodmedConverter {
         // second pass
         // construct output
 
-        GlodmedOutputGenerator output = null; // TODO
+        Constructor<GlodmedOwlOutputGenerator> constructor = mode.generator.getConstructor(Glodmed.class);
+        GlodmedOutputGenerator output = constructor.newInstance(glodmed);
 
         glodmed.forEach(entry -> {
 
@@ -208,40 +210,38 @@ public class GlodmedConverter {
 
         File sourceFile = new File(args[1]);
         if (!sourceFile.exists()) {
-            System.out.format("File %s does not exist.\n\n");
+            System.out.format("File %s does not exist.\n\n", args[1]);
             usageAndExit();
         }
-        if (!sourceFile.isDirectory()) {
-            System.out.format("%s is a directory but should be a file.\n\n");
+        if (sourceFile.isDirectory()) {
+            System.out.format("%s is a directory but should be a file.\n\n", args[1]);
             usageAndExit();
         }
 
-        String destination;
+        File destination;
 
         if (args[2] != null) {
-            destination = args[2];
+            destination = new File(args[2]);
         } else {
             File parentDir = sourceFile.getParentFile();
-            File destinationFile;
             String fileName = sourceFile.getName();
             switch (mode) {
                 case owl:
-                    destinationFile = new File(parentDir, fileName + ".owl");
+                    destination = new File(parentDir, fileName + ".owl");
                     break;
                 case skos_owl:
-                    destinationFile = new File(parentDir, fileName + ".skos.owl");
+                    destination = new File(parentDir, fileName + ".skos.owl");
                     break;
                 case skos_rdf:
                 default:
-                    destinationFile = new File(parentDir, fileName + ".skos.rdf");
+                    destination = new File(parentDir, fileName + ".skos.rdf");
                     break;
             }
-            destination = destinationFile.getAbsolutePath();
         }
 
         GlodmedConverter converter = new GlodmedConverter();
         try {
-            converter.transform(new FileReader(sourceFile), destination);
+            converter.transform(mode, new FileReader(sourceFile), destination);
         } catch (Exception e) {
             e.printStackTrace();
         }
