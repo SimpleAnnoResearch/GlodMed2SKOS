@@ -4,13 +4,11 @@ import de.simpleanno.glodmed.Glodmed;
 import de.simpleanno.glodmed.GlodmedOutputGenerator;
 import de.simpleanno.glodmed.Glossary;
 import de.simpleanno.glodmed.Language;
-import org.apache.commons.text.StringEscapeUtils;
 import org.semanticweb.owlapi.apibinding.OWLManager;
 import org.semanticweb.owlapi.io.OWLFunctionalSyntaxOntologyFormat;
 import org.semanticweb.owlapi.model.*;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -69,7 +67,7 @@ public class GlodmedOwlOutputGenerator extends GlodmedOutputGenerator {
 
     @Override
     public void addDefinition(String definition, Language language) {
-        OWLAnnotationAssertionAxiom ax = df.getOWLAnnotationAssertionAxiom(df.getOWLAnnotationProperty(IRI.create("http://www.w3.org/2004/02/skos/core#definition")), clazz.getIRI(), df.getOWLLiteral(StringEscapeUtils.escapeXml10(definition), language.isoCode));
+        OWLAnnotationAssertionAxiom ax = df.getOWLAnnotationAssertionAxiom(df.getOWLAnnotationProperty(IRI.create("http://www.w3.org/2004/02/skos/core#definition")), clazz.getIRI(), df.getOWLLiteral(definition, language.isoCode));
         changes.add(new AddAxiom(ontology, ax));
     }
 
