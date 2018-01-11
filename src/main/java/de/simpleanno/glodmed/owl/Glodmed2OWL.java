@@ -33,7 +33,6 @@ public class Glodmed2OWL {
 
     private final Pattern markupPattern = Pattern.compile("\\[.*?\\]|<.*?>");
 
-    private static final IRI GLODMED_CLASS_IRI = IRI.create("http://simple-anno.de/ontologies/dental_care_process#GLODMED");
 
     /**
      *
@@ -118,35 +117,9 @@ public class Glodmed2OWL {
         // second pass
         // construct SKOS ontology
 
-        HashSet<OWLClass> classes = new HashSet<>();
-
-        OWLOntologyManager mgr = OWLManager.createOWLOntologyManager();
-
-        OWLDataFactory df = mgr.getOWLDataFactory();
-
-        OWLOntology ontology = mgr.createOntology(iri(""));
-
-        OWLClass glodmedClass = df.getOWLClass(GLODMED_CLASS_IRI);
-
-        HashMap<Glossary, OWLNamedIndividual> glossaries = new HashMap<>();
-
-        glossaries.put(Glossary.GOMI, df.getOWLNamedIndividual(iri( "GOMI")));
-        glossaries.put(Glossary.GOOT, df.getOWLNamedIndividual(iri( "GOOT")));
-
-        ArrayList<OWLOntologyChange> changes = new ArrayList<>();
-        changes.add(new AddAxiom(ontology, df.getOWLDeclarationAxiom(glossaries.get(Glossary.GOMI))));
-        changes.add(new AddAxiom(ontology, df.getOWLDeclarationAxiom(glossaries.get(Glossary.GOOT))));
-
-        OWLAnnotationProperty glossaryProp = df.getOWLAnnotationProperty(iri("glossary"));
 
         glodmed.forEach(entry -> {
-            OWLClass clazz = df.getOWLClass(iri("" + entry.getId()));
 
-            changes.add(new AddAxiom(ontology, df.getOWLDeclarationAxiom(clazz)));
-
-            changes.add(new AddAxiom(ontology, df.getOWLSubClassOfAxiom(clazz, glodmedClass)));
-
-            changes.add(new AddAxiom(ontology, df.getOWLAnnotationAssertionAxiom(clazz.getIRI(), df.getOWLAnnotation(glossaryProp, glossaries.get(entry.getGlossary()).getIRI()))));
 
             BooleanFlag superTermHandled = new BooleanFlag();
 
@@ -160,9 +133,6 @@ public class Glodmed2OWL {
                     if (superLabel != null) {
                         List<GlodmedEntry> superEntries = glodmed.getEntriesByLabel(entry.getGlossary(), part.getSuperTerm(), language);
                         superEntries.forEach(superEntry -> {
-                            OWLSubClassOfAxiom subClassAxiom = df.getOWLSubClassOfAxiom(clazz, df.getOWLClass(
-                                    iri("" + superEntry.getId())));
-                            changes.add(new AddAxiom(ontology, subClassAxiom));
                         });
                     }
                 }
@@ -172,28 +142,18 @@ public class Glodmed2OWL {
                 superTermHandled.value = true;
 
                 Optional.of(part.getLabel()).filter(s -> !s.isEmpty()).ifPresent(label -> {
-                    OWLAnnotationAssertionAxiom ax = df.getOWLAnnotationAssertionAxiom(df.getRDFSLabel(), clazz.getIRI(), df.getOWLLiteral(label, languageCode));
-                    changes.add(new AddAxiom(ontology, ax));
                 });
 
                 Optional.of(part.getDefinition()).filter(s -> !s.isEmpty()).ifPresent(definition -> {
-                    OWLAnnotationAssertionAxiom ax = df.getOWLAnnotationAssertionAxiom(df.getOWLAnnotationProperty(IRI.create("http://www.w3.org/2004/02/skos/core#definition")), clazz.getIRI(), df.getOWLLiteral(definition, languageCode));
-                    changes.add(new AddAxiom(ontology, ax));
                 });
 
                 Optional.of(part.getSee()).filter(s -> !s.isEmpty()).ifPresent(see -> {
-                    OWLAnnotationAssertionAxiom ax = df.getOWLAnnotationAssertionAxiom(df.getRDFSIsDefinedBy(), clazz.getIRI(), df.getOWLLiteral(see, languageCode));
-                    changes.add(new AddAxiom(ontology, ax));
                 });
 
                 Optional.of(part.getSeeAlso()).filter(s -> !s.isEmpty()).ifPresent(seeAlso -> {
-                    OWLAnnotationAssertionAxiom ax = df.getOWLAnnotationAssertionAxiom(df.getRDFSSeeAlso(), clazz.getIRI(), df.getOWLLiteral(seeAlso, languageCode));
-                    changes.add(new AddAxiom(ontology, ax));
                 });
 
                 Optional.of(part.getCompare()).filter(s -> !s.isEmpty()).ifPresent(compare -> {
-                    OWLAnnotationAssertionAxiom ax = df.getOWLAnnotationAssertionAxiom(df.getOWLAnnotationProperty(IRI.create("http://www.w3.org/2004/02/skos/core#related")), clazz.getIRI(), df.getOWLLiteral(compare, languageCode));
-                    changes.add(new AddAxiom(ontology, ax));
                 });
 
 
@@ -206,15 +166,9 @@ public class Glodmed2OWL {
 
 
 
-        mgr.applyChanges(changes);
-
-        mgr.saveOntology(ontology, new OWLFunctionalSyntaxOntologyFormat(), new FileOutputStream("/tmp/qv_glodmed-2016.owl"));
 
     }
 
-    private IRI iri(String localname) {
-        return IRI.create(BASE + "#" + localname);
-    }
 
     /*
      * pre-condition: mainterm.length > 0
