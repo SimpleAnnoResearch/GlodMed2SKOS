@@ -202,9 +202,9 @@ public class GlodmedConverter {
         if (args.length <2 || args.length > 3) {
             usageAndExit();
         }
-        Mode mode = Mode.valueOf(args[0]);
+        Mode mode = Mode.valueOf(args[0].replace('-', '_'));
         if (mode == null) {
-            System.out.println("format must be one of owl, skosRDF, or skosOWL\n");
+            System.out.println("format must be one of owl, skos-rdf, or skos-owl\n");
             usageAndExit();
         }
 
